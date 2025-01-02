@@ -54,11 +54,23 @@ app.use(express.static(path.join(__dirname), {
         
         // Set correct MIME types for JavaScript files
         if (path.endsWith('.js')) {
-            res.set('Content-Type', 'application/javascript');
+            res.setHeader('Content-Type', 'application/javascript');
+        } else if (path.endsWith('.html')) {
+            res.setHeader('Content-Type', 'text/html');
+        } else if (path.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
         }
     }
 }));
+
+// Serve images directory
 app.use('/images', express.static(path.join(__dirname, 'images')));
+
+// Serve JavaScript files explicitly
+app.get('*.js', (req, res, next) => {
+    res.type('application/javascript');
+    next();
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
