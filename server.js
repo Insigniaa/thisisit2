@@ -51,6 +51,11 @@ app.use(express.static(path.join(__dirname), {
         res.set('X-Content-Type-Options', 'nosniff');
         res.set('X-Frame-Options', 'DENY');
         res.set('X-XSS-Protection', '1; mode=block');
+        
+        // Set correct MIME types for JavaScript files
+        if (path.endsWith('.js')) {
+            res.set('Content-Type', 'application/javascript');
+        }
     }
 }));
 app.use('/images', express.static(path.join(__dirname, 'images')));
