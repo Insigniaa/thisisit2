@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Streamer Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0c12 0%, #1a1c24 100%);
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* Fireworks Container */
+        #fireworkContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Main content container */
+        .container {
+            position: relative;
+            max-width: 800px;
+            margin: 0 auto;
+            z-index: 1;
+            /* Add padding to prevent content from being hidden under fixed elements */
+            padding-bottom: 40px;
+        }
+
+        .controls-section {
+            margin-bottom: 32px;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+            background: rgba(15, 17, 25, 0.95);
+            padding: 20px;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px 12px 40px;
+            border-radius: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            background: rgba(20, 22, 30, 0.8);
+            color: #fff;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: rgba(66, 153, 255, 0.5);
+            background: rgba(25, 27, 35, 0.9);
+            box-shadow: 0 0 0 4px rgba(66, 153, 255, 0.15);
+            outline: none;
+        }
+
+        .search-container::before {
+            content: '🔍';
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-button {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(20, 22, 30, 0.8);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-button:hover {
+            background: rgba(30, 32, 40, 0.9);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .filter-button.active {
+            background: rgba(66, 153, 255, 0.15);
+            color: #4299ff;
+            border-color: rgba(66, 153, 255, 0.3);
+        }
+
+        .refresh-button {
+            position: relative;
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, #4299ff, #2563eb);
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 auto 32px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow: hidden;
+            min-width: 120px;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(66, 153, 255, 0.25);
+        }
+
+        .refresh-button::before {
+            content: '🔄';
+            font-size: 16px;
+            transition: transform 0.3s ease;
+        }
+
+        .refresh-button:hover::before {
+            transform: rotate(180deg);
+        }
+
+        .refresh-button.loading {
+            pointer-events: none;
+            background: linear-gradient(135deg, #1967d2, #2188ff);
+        }
+
+        .refresh-button.loading::before {
+            content: '';
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: refreshSpin 0.6s linear infinite;
+        }
+
+        @keyframes refreshSpin {
+            to { transform: rotate(360deg); }
+        }
+
+        .refresh-button:not(.loading):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(33, 136, 255, 0.3);
+        }
+
+        .section {
+            margin-bottom: 32px;
+            animation: fadeIn 0.5s ease;
+            position: relative;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: sectionEnter 0.5s ease forwards;
+        }
+
+        @keyframes sectionEnter {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section:nth-child(2) { animation-delay: 0.1s; }
+        .section:nth-child(3) { animation-delay: 0.2s; }
+        .section:nth-child(4) { animation-delay: 0.3s; }
+
+        .streamer-card {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: cardEnter 0.5s ease forwards;
+        }
+
+        @keyframes cardEnter {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .streamer-card:nth-child(1) { animation-delay: 0.1s; }
+        .streamer-card:nth-child(2) { animation-delay: 0.2s; }
+        .streamer-card:nth-child(3) { animation-delay: 0.3s; }
+        .streamer-card:nth-child(4) { animation-delay: 0.4s; }
+        .streamer-card:nth-child(5) { animation-delay: 0.5s; }
+
+        .section-title {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, 
+                rgba(25, 27, 35, 0.9) 0%, 
+                rgba(20, 22, 30, 0.9) 100%);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section-title::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(to bottom, #2188ff, #1967d2);
+        }
+
+        #liveSection .section-title::before {
+            background: linear-gradient(to bottom, #ff4444, #cc0000);
+        }
+
+        #offlineSection .section-title::before {
+            background: linear-gradient(to bottom, #4299ff, #2563eb);
+        }
+
+        #bannedSection .section-title::before {
+            background: linear-gradient(to bottom, #ff0000, #990000);
+        }
+
+        .section-title .count {
+            background: rgba(33, 136, 255, 0.15);
+            color: #2188ff;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            min-width: 32px;
+            text-align: center;
+            border: 1px solid rgba(33, 136, 255, 0.3);
+            margin-left: auto;
+        }
+
+        .section-title::after {
+            content: attr(data-count);
+            background: rgba(33, 136, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            color: #2188ff;
+        }
+
+        .streamer-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 60px;
+            position: relative;
+        }
+
+        .streamer-list:empty::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.05) 0%, 
+                rgba(255, 255, 255, 0.03) 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: pulse 1.5s infinite;
+        }
+
+        .streamer-card {
+            position: relative;
+            z-index: 2;
+            background: rgba(20, 22, 30, 0.7);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .streamer-card:hover {
+            transform: translateY(-4px);
+            background: rgba(25, 27, 35, 0.8);
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .streamer-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.03) 50%,
+                transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .streamer-card:hover::after {
+            opacity: 1;
+        }
+
+        .streamer-card.kick:hover {
+            border-color: rgba(50, 255, 100, 0.3);
+            box-shadow: 0 8px 32px rgba(50, 255, 100, 0.15);
+        }
+
+        .streamer-card.twitch:hover {
+            border-color: rgba(145, 70, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(145, 70, 255, 0.15);
+        }
+
+        .streamer-card.youtube:hover {
+            border-color: rgba(255, 0, 0, 0.3);
+            box-shadow: 0 8px 32px rgba(255, 0, 0, 0.15);
+        }
+
+        .streamer-card.top-streamer {
+            border: 2px solid transparent;
+            background: linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)) padding-box,
+                        linear-gradient(135deg, #FFD700, #FFA500) border-box;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+            position: relative;
+            z-index: 3;
+            transform: scale(1.02);
+        }
+
+        .top-streamer-badge {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #000;
+            padding: 6px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border: 2px solid #FFD700;
+            animation: badgeFloat 3s ease-in-out infinite;
+            z-index: 10;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .top-streamer-badge::before {
+            content: '👑';
+            font-size: 15px;
+            margin-right: 4px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+
+        @keyframes badgeFloat {
+            0%, 100% { transform: translateY(0) rotate(-1deg); }
+            50% { transform: translateY(-2px) rotate(1deg); }
+        }
+
+        .streamer-card:hover .top-streamer-badge {
+            transform: translateY(-3px);
+        }
+
+        .streamer-card.top-streamer::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            background: linear-gradient(135deg, 
+                transparent 0%, 
+                rgba(255, 215, 0, 0.08) 50%,
+                transparent 100%);
+            border-radius: inherit;
+            animation: borderGlow 3s infinite;
+            z-index: -1;
+        }
+
+        @keyframes borderGlow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .streamer-card.top-streamer:hover {
+            transform: translateY(-4px) scale(1.03);
+            box-shadow: 0 8px 32px rgba(255, 215, 0, 0.25);
+        }
+
+        .streamer-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .streamer-card:hover::before {
+            transform: translateX(100%);
+        }
+
+        .streamer-card:hover {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2),
+                        0 0 0 1px rgba(255, 255, 255, 0.15) inset,
+                        0 0 30px rgba(33, 136, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .streamer-card.live {
+            position: relative;
+        }
+
+        /* Platform-specific gradients */
+        .streamer-card.live.kick {
+            background: linear-gradient(135deg,
+                rgba(50, 255, 100, 0.07) 0%,
+                rgba(50, 255, 100, 0.03) 100%);
+            border-color: rgba(50, 255, 100, 0.15);
+        }
+
+        .streamer-card.live.twitch {
+            background: linear-gradient(135deg,
+                rgba(145, 70, 255, 0.07) 0%,
+                rgba(145, 70, 255, 0.03) 100%);
+            border-color: rgba(145, 70, 255, 0.15);
+        }
+
+        .streamer-card.live.youtube {
+            background: linear-gradient(135deg,
+                rgba(255, 0, 0, 0.07) 0%,
+                rgba(255, 0, 0, 0.03) 100%);
+            border-color: rgba(255, 0, 0, 0.15);
+        }
+
+        /* Platform-specific hover effects */
+        .streamer-card.live.kick:hover {
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2),
+                        0 0 0 1px rgba(50, 255, 100, 0.3) inset,
+                        0 0 30px rgba(50, 255, 100, 0.1);
+            border-color: rgba(50, 255, 100, 0.3);
+        }
+
+        .streamer-card.live.twitch:hover {
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2),
+                        0 0 0 1px rgba(145, 70, 255, 0.3) inset,
+                        0 0 30px rgba(145, 70, 255, 0.1);
+            border-color: rgba(145, 70, 255, 0.3);
+        }
+
+        .streamer-card.live.youtube:hover {
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2),
+                        0 0 0 1px rgba(255, 0, 0, 0.3) inset,
+                        0 0 30px rgba(255, 0, 0, 0.1);
+            border-color: rgba(255, 0, 0, 0.3);
+        }
+
+        /* Platform-specific glow animations */
+        .streamer-card.live.kick::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg,
+                transparent,
+                rgba(50, 255, 100, 0.1),
+                transparent);
+            opacity: 0;
+            animation: platformGlow 3s infinite;
+        }
+
+        .streamer-card.live.twitch::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg,
+                transparent,
+                rgba(145, 70, 255, 0.1),
+                transparent);
+            opacity: 0;
+            animation: platformGlow 3s infinite;
+        }
+
+        .streamer-card.live.youtube::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg,
+                transparent,
+                rgba(255, 0, 0, 0.1),
+                transparent);
+            opacity: 0;
+            animation: platformGlow 3s infinite;
+        }
+
+        @keyframes platformGlow {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Platform-specific viewer count styles */
+        .streamer-card.kick .viewer-count {
+            background: rgba(50, 255, 100, 0.1);
+            box-shadow: 0 2px 8px rgba(50, 255, 100, 0.15);
+        }
+
+        .streamer-card.twitch .viewer-count {
+            background: rgba(145, 70, 255, 0.1);
+            box-shadow: 0 2px 8px rgba(145, 70, 255, 0.15);
+        }
+
+        .streamer-card.youtube .viewer-count {
+            background: rgba(255, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(255, 0, 0, 0.15);
+        }
+
+        .avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(0, 0, 0, 0.2);
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Platform-specific avatar hover effects */
+        .streamer-card:hover .avatar {
+            transform: scale(1.15) rotate(5deg);
+            border-width: 4px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .streamer-card.kick:hover .avatar {
+            border-color: rgba(50, 255, 100, 0.8);
+            box-shadow: 0 8px 24px rgba(50, 255, 100, 0.3);
+        }
+
+        .streamer-card.twitch:hover .avatar {
+            border-color: rgba(145, 70, 255, 0.8);
+            box-shadow: 0 8px 24px rgba(145, 70, 255, 0.3);
+        }
+
+        .streamer-card.youtube:hover .avatar {
+            border-color: rgba(255, 0, 0, 0.8);
+            box-shadow: 0 8px 24px rgba(255, 0, 0, 0.3);
+        }
+
+        /* Live streamer avatar hover effect */
+        .streamer-card.live:hover .avatar {
+            animation: avatarPulse 2s infinite;
+        }
+
+        @keyframes avatarPulse {
+            0% { transform: scale(1.15) rotate(5deg); }
+            50% { transform: scale(1.2) rotate(10deg); }
+            100% { transform: scale(1.15) rotate(5deg); }
+        }
+
+        .streamer-info {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .name-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .streamer-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: #fff;
+        }
+
+        .platform-badge {
+            padding: 4px 12px 4px 32px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            position: relative;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+
+        .platform-badge::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            filter: brightness(1);
+        }
+
+        .platform-badge.kick {
+            color: rgb(50, 255, 100);
+            background: rgba(50, 255, 100, 0.1);
+            border: 1px solid rgba(50, 255, 100, 0.25);
+        }
+
+        .platform-badge.youtube {
+            color: rgb(255, 70, 70);
+            background: rgba(255, 70, 70, 0.1);
+            border: 1px solid rgba(255, 70, 70, 0.25);
+        }
+
+        .platform-badge.twitch {
+            color: rgb(145, 70, 255);
+            background: rgba(145, 70, 255, 0.1);
+            border: 1px solid rgba(145, 70, 255, 0.25);
+        }
+
+        .stream-title {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .stream-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .viewer-count {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.3s ease;
+        }
+
+        .viewer-count::before {
+            content: '👥';
+            font-size: 13px;
+        }
+
+        .streamer-card:hover .viewer-count {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .streamer-card.kick .viewer-count {
+            background: rgba(50, 255, 100, 0.08);
+            border-color: rgba(50, 255, 100, 0.2);
+        }
+
+        .streamer-card.twitch .viewer-count {
+            background: rgba(145, 70, 255, 0.08);
+            border-color: rgba(145, 70, 255, 0.2);
+        }
+
+        .streamer-card.youtube .viewer-count {
+            background: rgba(255, 70, 70, 0.08);
+            border-color: rgba(255, 70, 70, 0.2);
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-2px); }
+        }
+
+        .preview-card {
+            display: none;
+            position: absolute;
+            left: 100%;
+            top: 0;
+            margin-left: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            width: 340px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .streamer-card:hover .preview-card {
+            display: block;
+        }
+
+        .preview-thumbnail {
+            width: 100%;
+            height: 190px;
+            object-fit: cover;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .preview-info {
+            padding: 16px;
+        }
+
+        .preview-stats {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 12px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .preview-uptime {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .preview-uptime::before {
+            content: '●';
+            color: #ff4444;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .stream-category {
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            font-size: 12px;
+            margin-top: 12px;
+            font-weight: 500;
+        }
+
+        .viewer-trend {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .viewer-trend.up {
+            background: rgba(0, 255, 0, 0.1);
+            color: #4ade80;
+        }
+
+        .viewer-trend.down {
+            background: rgba(255, 0, 0, 0.1);
+            color: #f87171;
+        }
+
+        .profile-pic {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .streamer-card:hover .profile-pic {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .streamer-info {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .streamer-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .platform-badge {
+            padding: 4px 8px 4px 24px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            position: relative;
+            min-width: 80px;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        .platform-badge::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .platform-badge.youtube {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff4444;
+        }
+
+        .platform-badge.youtube::before {
+            background-image: url('../images/youtube-logo.png');
+        }
+
+        .platform-badge.kick {
+            background: rgba(0, 255, 0, 0.1);
+            color: #4ade80;
+        }
+
+        .platform-badge.kick::before {
+            background-image: url('../images/kick-logo.png');
+        }
+
+        .platform-badge.twitch {
+            background: rgba(145, 71, 255, 0.1);
+            color: #9147ff;
+        }
+
+        .platform-badge.twitch::before {
+            background-image: url('../images/twitch-logo.png');
+        }
+
+        .stream-title {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .stream-title:hover::after {
+            content: attr(data-title);
+            position: absolute;
+            left: 0;
+            top: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            white-space: normal;
+            max-width: 300px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            margin-top: 8px;
+        }
+
+        .status-container {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-left: auto;
+            padding-left: 16px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .viewer-count {
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            min-width: 80px;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .viewer-count::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(255, 255, 255, 0.1),
+                transparent
+            );
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .streamer-card:hover .viewer-count::after {
+            transform: translateX(100%);
+        }
+
+        .platform-youtube .viewer-count {
+            background: rgba(255, 0, 0, 0.1);
+        }
+
+        .platform-kick .viewer-count {
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        .platform-twitch .viewer-count {
+            background: rgba(145, 71, 255, 0.1);
+        }
+
+        .viewer-count::before {
+            display: none;
+        }
+
+        .live-badge {
+            background: rgba(255, 0, 0, 0.15);
+            color: #ff4444;
+            padding: 4px 12px 4px 24px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(255, 68, 68, 0.15);
+            border: 1px solid rgba(255, 68, 68, 0.2);
+        }
+
+        .live-badge::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            background: #ff4444;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+            animation: livePulse 2s infinite;
+        }
+
+        @keyframes livePulse {
+            0% { transform: translateY(-50%) scale(0.8); opacity: 0.5; }
+            50% { transform: translateY(-50%) scale(1.1); opacity: 1; }
+            100% { transform: translateY(-50%) scale(0.8); opacity: 0.5; }
+        }
+
+        .stream-category-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 8px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+        }
+
+        /* Remove popup-related styles */
+        .popup,
+        .popup-content,
+        .close-popup,
+        .popup.hidden {
+            display: none;
+        }
+
+        .banned-badge {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            animation: pulse 2s infinite;
+        }
+
+        .streamer-card.banned {
+            background: linear-gradient(135deg,
+                rgba(255, 0, 0, 0.07) 0%,
+                rgba(0, 0, 0, 0.15) 100%);
+            border: 1px solid rgba(255, 0, 0, 0.2);
+            position: relative;
+            filter: saturate(0.8) brightness(0.95);
+            cursor: not-allowed;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .streamer-card.banned::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            z-index: 1;
+        }
+
+        .streamer-card.banned > * {
+            position: relative;
+            z-index: 2;
+        }
+
+        .streamer-card.banned:hover {
+            transform: none;
+            box-shadow: none;
+            border-color: rgba(255, 0, 0, 0.15);
+        }
+
+        .banned-badge {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            color: white;
+            padding: 4px 12px 4px 28px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(255, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .banned-badge::before {
+            content: '⚠️';
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+        }
+
+        .streamer-card.banned .avatar {
+            filter: grayscale(1);
+            opacity: 0.7;
+            border-color: rgba(255, 0, 0, 0.2);
+        }
+
+        .streamer-card.banned:hover .avatar {
+            filter: grayscale(1);
+            opacity: 0.7;
+            transform: none;
+            border-color: rgba(255, 0, 0, 0.2);
+            box-shadow: none;
+        }
+
+        .streamer-card.banned .stream-title {
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+        }
+
+        .streamer-card.banned .streamer-name {
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: line-through;
+            text-decoration-color: rgba(255, 0, 0, 0.4);
+        }
+
+        .refresh-button.loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .refresh-button.loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 200%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.2) 50%,
+                transparent 100%
+            );
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            from { transform: translateX(0); }
+            to { transform: translateX(50%); }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 0.3; }
+            100% { opacity: 0.6; }
+        }
+
+        .show-more-button {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-top: 12px;
+            width: 100%;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .show-more-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(19, 21, 26, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .loading-overlay.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-message {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading-message::after {
+            content: '';
+            display: block;
+            width: 50px;
+            height: 50px;
+            margin: 20px auto 0;
+            border: 3px solid transparent;
+            border-top-color: #2188ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 0.5rem;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        .loading-subtext {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeInUp 0.5s ease 0.2s forwards;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.5; }
+            50% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.5; }
+        }
+
+        .last-seen {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .last-seen::before {
+            content: '⏱️';
+            font-size: 12px;
+        }
+
+        /* Viewer Count Enhancement */
+        .viewer-count {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .viewer-count::before {
+            display: none;
+        }
+
+        /* Viewer trend styles */
+        .viewer-trend {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .viewer-trend.up {
+            background: rgba(52, 211, 153, 0.15);
+            color: #34D399;
+        }
+
+        .viewer-trend.down {
+            background: rgba(239, 68, 68, 0.15);
+            color: #EF4444;
+        }
+
+        .viewer-trend:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.1);
+        }
+
+        .scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+        }
+
+        .scroll-progress::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: var(--scroll-width, 0%);
+            background: linear-gradient(90deg, #2188ff, #1967d2);
+            transition: width 0.1s ease;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .streamer-card {
+                padding: 16px;
+                gap: 16px;
+            }
+
+            .avatar {
+                width: 56px;
+                height: 56px;
+            }
+
+            .platform-badge {
+                padding: 4px 8px;
+                font-size: 10px;
+            }
+
+            .stream-title {
+                font-size: 13px;
+            }
+
+            .viewer-count {
+                font-size: 12px;
+                padding: 4px 10px;
+            }
+        }
+
+        .streamer-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .streamer-card:hover {
+            transform: translateY(-2px) scale(1.01);
+        }
+
+        .streamer-card:hover .avatar {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .streamer-card.live:hover .live-badge::before {
+            animation: livePulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes livePulse {
+            0% { transform: scale(0.95); opacity: 0.5; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.5; }
+        }
+
+        .filter-button {
+            transition: all 0.2s ease;
+        }
+
+        .filter-button:hover {
+            transform: translateY(-1px);
+        }
+
+        .filter-button.active {
+            transform: scale(1.05);
+        }
+
+        .refresh-button {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .refresh-button:hover {
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        .search-input {
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            transform: translateY(-1px);
+        }
+
+        .platform-badge {
+            transition: all 0.2s ease;
+        }
+
+        .streamer-card:hover .platform-badge {
+            transform: translateY(-1px);
+            filter: brightness(1.1);
+        }
+
+        .viewer-count {
+            transition: all 0.2s ease;
+        }
+
+        .streamer-card:hover .viewer-count {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .section-title {
+            transition: all 0.3s ease;
+        }
+
+        .section-title:hover {
+            transform: translateY(-1px);
+            background: linear-gradient(135deg, 
+                rgba(30, 32, 40, 0.9) 0%, 
+                rgba(25, 27, 35, 0.9) 100%);
+        }
+
+        #offlineSection .streamer-card {
+            filter: grayscale(1);
+            opacity: 0.8;
+            background: rgba(20, 22, 30, 0.5);
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        #offlineSection .streamer-card:hover {
+            opacity: 0.9;
+            border-color: rgba(255, 255, 255, 0.1);
+            background: rgba(25, 27, 35, 0.6);
+        }
+
+        #offlineSection .avatar {
+            filter: grayscale(1);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        #offlineSection .streamer-name {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        #offlineSection .platform-badge {
+            filter: grayscale(1);
+            opacity: 0.7;
+        }
+
+        #offlineSection .stream-title {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        #offlineSection .viewer-count {
+            filter: grayscale(1);
+            opacity: 0.7;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        #offlineSection .last-seen {
+            color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.03);
+        }
+    </style>
+</head>
+<body>
+    <div class="scroll-progress"></div>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-message">
+            <div class="loading-text">Loading Streamers</div>
+            <div class="loading-subtext">Fetching data from Kick, YouTube, and Twitch</div>
+        </div>
+    </div>
+    <template id="streamer-card-template">
+        <a class="streamer-card" href="#">
+            <img class="profile-pic avatar" src="" alt="">
+            <div class="streamer-info">
+                <div class="name-container">
+                    <span class="name-text streamer-name"></span>
+                    <span class="platform-badge"></span>
+                </div>
+                <div class="stream-title"></div>
+            </div>
+            <div class="status-container">
+                <div class="viewer-count">👁️ 0</div>
+                <div class="live-badge">LIVE</div>
+            </div>
+            <div class="preview-card">
+                <img class="preview-thumbnail" src="" alt="">
+                <div class="preview-info">
+                    <div class="stream-title"></div>
+                    <div class="preview-stats">
+                        <div class="preview-uptime"></div>
+                        <div class="stream-category"></div>
+                        <div class="viewer-trend"></div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </template>
+    <div id="fireworkContainer"></div>
+    <div class="container">
+        <div class="controls-section">
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="Search streamers...">
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-button active">All</button>
+                <button class="filter-button">Live</button>
+                <button class="filter-button">Offline</button>
+            </div>
+        </div>
+
+        <button class="refresh-button">Refresh</button>
+
+        <section class="section" id="liveSection">
+            <h2 class="section-title">Live Now <span class="count" id="liveCount">0</span></h2>
+            <div class="streamer-list" id="liveStreamers"></div>
+        </section>
+
+        <section class="section" id="offlineSection">
+            <h2 class="section-title">Offline <span class="count" id="offlineCount">0</span></h2>
+            <div class="streamer-list" id="offlineStreamers"></div>
+            <button class="show-more-button" id="showMoreOffline" style="display: none;">Show More Offline Streamers</button>
+        </section>
+
+        <section class="section" id="bannedSection">
+            <h2 class="section-title">Banned <span class="count" id="bannedCount">0</span></h2>
+            <div class="streamer-list" id="bannedStreamers"></div>
+        </section>
+    </div>
+    <!-- Load minified and obfuscated scripts -->
+    <script src="kick-widget.min.js"></script>
+    <script src="youtube-widget.min.js"></script>
+    <script src="twitch-widget.min.js"></script>
+    <script src="app.js"></script>
+    <button class="back-to-top" id="backToTop" style="display: none;">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html> 
