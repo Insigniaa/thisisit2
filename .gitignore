@@ -23,4 +23,10 @@ pids
 
 # OS
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Original JavaScript files
+kick-widget.js
+youtube-widget.js
+twitch-widget.js
+app.js 

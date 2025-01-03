@@ -3,10 +3,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const kickWidget = new KickWidget();
     const youtubeWidget = new YouTubeWidget();
     const twitchWidget = new TwitchWidget();
-    const dliveWidget = new DLiveWidget();
-    
-    // Add DLive streamers
-    dliveWidget.addStreamer('OfficialBjornTV');
     
     // DOM Elements
     const searchInput = document.querySelector('.search-input');
@@ -134,11 +130,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadingOverlay.classList.remove('fade-out');
             }
             
-            const [kickData, youtubeData, twitchData, dliveData] = await Promise.all([
+            const [kickData, youtubeData, twitchData] = await Promise.all([
                 kickWidget.getStreamerInfo(),
                 youtubeWidget.getStreamerInfo(),
-                twitchWidget.getStreamerInfo(),
-                dliveWidget.getStreamerInfo()
+                twitchWidget.getStreamerInfo()
             ]);
 
             if (initialLoad) {
@@ -149,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 300);
             }
 
-            const allStreamers = [...kickData, ...youtubeData, ...twitchData, ...dliveData];
+            const allStreamers = [...kickData, ...youtubeData, ...twitchData];
             allStreamers.forEach(updateLastSeen);
 
             // Check which previously banned streamers are no longer in the response
