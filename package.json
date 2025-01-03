@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "dev": "nodemon server.js",
     "prebuild": "npm install",
     "build": "npm run minify && npm run obfuscate",
     "minify": "uglifyjs kick-widget.js -o kick-widget.min.js && uglifyjs youtube-widget.js -o youtube-widget.min.js && uglifyjs twitch-widget.js -o twitch-widget.min.js && uglifyjs app.js -o app.min.js",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "javascript-obfuscator": "^4.1.1",
+    "nodemon": "^3.0.3",
     "uglify-js": "^3.19.3"
   },
   "engines": {

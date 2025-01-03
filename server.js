@@ -486,7 +486,8 @@ app.get('/api/twitch-live/:username', async (req, res) => {
     }
 });
 
+// Update the port configuration
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
 }); 
