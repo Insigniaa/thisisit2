@@ -30,8 +30,8 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "'unsafe-inline'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
             imgSrc: ["'self'", "https:", "data:", "https://yt3.ggpht.com", "https://i.ytimg.com"],
             connectSrc: [
                 "'self'", 
@@ -44,6 +44,14 @@ app.use(helmet({
         }
     }
 }));
+
+// Force HTTPS redirect
+app.use((req, res, next) => {
+    if (process.env.NODE_ENV === 'production' && !req.secure && req.get('x-forwarded-proto') !== 'https') {
+        return res.redirect('https://' + req.get('host') + req.url);
+    }
+    next();
+});
 
 // Serve static files with security headers
 app.use(express.static(path.join(__dirname), {
