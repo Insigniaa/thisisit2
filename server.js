@@ -8,8 +8,14 @@ const helmet = require('helmet');
 
 const app = express();
 
+// Serve static files from the current directory
+app.use(express.static(__dirname));
+
+// Parse JSON bodies
+app.use(express.json());
+
 // CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [];
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:3000'];
 app.use(cors({
     origin: function(origin, callback) {
         // Allow requests with no origin (like mobile apps or curl requests)
@@ -29,17 +35,21 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
-            imgSrc: ["'self'", "https:", "data:", "https://yt3.ggpht.com", "https://i.ytimg.com"],
+            imgSrc: ["'self'", "https:", "data:", "https://yt3.ggpht.com", "https://i.ytimg.com", "https://images.dlive.tv"],
             connectSrc: [
                 "'self'", 
+                "http://localhost:3000",
                 "https://kick.com", 
                 "https://www.youtube.com", 
                 "https://youtube.com",
                 "https://www.googleapis.com",
-                "https://api.twitch.tv"
+                "https://api.twitch.tv",
+                "https://graphigo.prd.dlive.tv",
+                "https://dlive.tv",
+                "https://images.dlive.tv"
             ],
         }
     }
@@ -486,8 +496,107 @@ app.get('/api/twitch-live/:username', async (req, res) => {
     }
 });
 
+app.get('/api/dlive/:username', async (req, res) => {
+    try {
+        const username = req.params.username;
+        console.log('Fetching DLive data for username:', username);
+        
+        const query = `
+            query {
+                userByDisplayName(displayname: "${username}") {
+                    displayname
+                    avatar
+                    username
+                    partnerStatus
+                    livestream {
+                        title
+                        watchingCount
+                        thumbnailUrl
+                        createdAt
+                        category {
+                            title
+                        }
+                    }
+                    followers {
+                        totalCount
+                    }
+                }
+            }
+        `;
+
+        console.log('Sending request to DLive API...');
+        const response = await fetch('https://graphigo.prd.dlive.tv/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Origin': 'https://dlive.tv',
+                'Referer': 'https://dlive.tv/',
+                'Accept-Language': 'en-US,en;q=0.9'
+            },
+            body: JSON.stringify({ 
+                query,
+                variables: null,
+                operationName: null
+            })
+        });
+
+        console.log('Response status:', response.status);
+        const responseText = await response.text();
+        console.log('Response body:', responseText);
+
+        if (!response.ok) {
+            throw new Error(`DLive API request failed: ${response.status} ${response.statusText}`);
+        }
+
+        const data = JSON.parse(responseText);
+        
+        // Check for GraphQL errors
+        if (data.errors) {
+            console.error('DLive GraphQL errors:', JSON.stringify(data.errors, null, 2));
+            throw new Error(data.errors[0].message);
+        }
+
+        // Check if user exists
+        if (!data.data || !data.data.userByDisplayName) {
+            console.log('User not found:', username);
+            return res.status(404).json({ error: 'Streamer not found' });
+        }
+
+        const userData = data.data.userByDisplayName;
+        const responseData = {
+            displayName: userData.displayname,
+            avatar: userData.avatar,
+            livestream: {
+                title: userData.livestream?.title || '',
+                watchingCount: userData.livestream?.watchingCount || 0,
+                isLive: Boolean(userData.livestream), // If livestream exists, they're live
+                thumbnailUrl: userData.livestream?.thumbnailUrl || '',
+                createdAt: userData.livestream?.createdAt || null,
+                category: userData.livestream?.category?.title || ''
+            },
+            followers: userData.followers?.totalCount || 0
+        };
+        
+        console.log('Sending response:', JSON.stringify(responseData, null, 2));
+        res.json(responseData);
+    } catch (error) {
+        console.error('Detailed DLive API error:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        res.status(500).json({ 
+            error: 'Failed to fetch DLive streamer data',
+            details: error.message
+        });
+    }
+});
+
 // Update the port configuration
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }); 

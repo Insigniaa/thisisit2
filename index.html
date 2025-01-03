@@ -1644,6 +1644,85 @@
             background: rgba(255, 255, 255, 0.12);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
+
+        /* Platform-specific styles */
+        .platform-badge.dlive {
+            background: rgba(255, 204, 0, 0.1);
+            color: #ffcc00;
+            border: 1px solid rgba(255, 204, 0, 0.25);
+        }
+
+        .platform-badge.dlive::before {
+            content: '';
+            background-image: url('images/dlive-logo.png');
+            background-size: 16px 16px;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 16px;
+            height: 16px;
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            filter: brightness(1.2);
+        }
+
+        .streamer-card.dlive .avatar {
+            border-color: rgba(255, 204, 0, 0.3);
+        }
+
+        .streamer-card.dlive:hover {
+            border-color: rgba(255, 204, 0, 0.3);
+            box-shadow: 0 8px 32px rgba(255, 204, 0, 0.15);
+        }
+
+        .streamer-card.live.dlive {
+            background: linear-gradient(135deg,
+                rgba(255, 204, 0, 0.07) 0%,
+                rgba(255, 204, 0, 0.03) 100%);
+            border-color: rgba(255, 204, 0, 0.15);
+        }
+
+        .streamer-card.live.dlive:hover {
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2),
+                        0 0 0 1px rgba(255, 204, 0, 0.3) inset,
+                        0 0 30px rgba(255, 204, 0, 0.1);
+            border-color: rgba(255, 204, 0, 0.3);
+        }
+
+        .streamer-card.dlive .viewer-count {
+            background: rgba(255, 204, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(255, 204, 0, 0.15);
+        }
+
+        /* DLive glow animation */
+        .streamer-card.live.dlive::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg,
+                transparent,
+                rgba(255, 204, 0, 0.1),
+                transparent);
+            opacity: 0;
+            animation: platformGlow 3s infinite;
+        }
+
+        /* DLive hover effects */
+        .streamer-card.dlive:hover .avatar {
+            border-color: rgba(255, 204, 0, 0.8);
+            box-shadow: 0 8px 24px rgba(255, 204, 0, 0.3);
+        }
+
+        .streamer-card.dlive:hover .platform-badge {
+            background: rgba(255, 204, 0, 0.15);
+            border-color: rgba(255, 204, 0, 0.4);
+        }
+
+        .streamer-card.dlive:hover .viewer-count {
+            background: rgba(255, 204, 0, 0.15);
+            border-color: rgba(255, 204, 0, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -1712,11 +1791,12 @@
             <div class="streamer-list" id="bannedStreamers"></div>
         </section>
     </div>
-    <!-- Load minified and obfuscated scripts -->
-    <script src="app.min.js"></script>
+    <!-- Widget Scripts -->
+    <script src="kick-widget.min.js"></script>
     <script src="youtube-widget.min.js"></script>
     <script src="twitch-widget.min.js"></script>
-    <script src="kick-widget.min.js"></script>
+    <script src="dlive-widget.min.js"></script>
+    <script src="app.min.js"></script>
     <button class="back-to-top" id="backToTop" style="display: none;">
         <i class="fas fa-arrow-up"></i>
     </button>

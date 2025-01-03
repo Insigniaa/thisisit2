@@ -8,8 +8,8 @@
     "dev": "nodemon server.js",
     "prebuild": "npm install",
     "build": "npm run minify && npm run obfuscate",
-    "minify": "uglifyjs kick-widget.js -o kick-widget.min.js && uglifyjs youtube-widget.js -o youtube-widget.min.js && uglifyjs twitch-widget.js -o twitch-widget.min.js && uglifyjs app.js -o app.min.js",
-    "obfuscate": "javascript-obfuscator kick-widget.min.js --output kick-widget.min.js && javascript-obfuscator youtube-widget.min.js --output youtube-widget.min.js && javascript-obfuscator twitch-widget.min.js --output twitch-widget.min.js && javascript-obfuscator app.min.js --output app.min.js"
+    "minify": "uglifyjs kick-widget.js -o kick-widget.min.js && uglifyjs youtube-widget.js -o youtube-widget.min.js && uglifyjs twitch-widget.js -o twitch-widget.min.js && uglifyjs dlive-widget.js -o dlive-widget.min.js && uglifyjs app.js -o app.min.js",
+    "obfuscate": "javascript-obfuscator kick-widget.min.js --output kick-widget.min.js && javascript-obfuscator youtube-widget.min.js --output youtube-widget.min.js && javascript-obfuscator twitch-widget.min.js --output twitch-widget.min.js && javascript-obfuscator dlive-widget.min.js --output dlive-widget.min.js && javascript-obfuscator app.min.js --output app.min.js"
   },
   "dependencies": {
     "axios": "^1.7.9",
@@ -26,6 +26,7 @@
   "devDependencies": {
     "javascript-obfuscator": "^4.1.1",
     "nodemon": "^3.0.3",
+    "terser": "^5.37.0",
     "uglify-js": "^3.19.3"
   },
   "engines": {
